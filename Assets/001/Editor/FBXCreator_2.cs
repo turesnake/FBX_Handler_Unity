@@ -34,12 +34,6 @@ public static class FBXCreator_2
         Mesh mesh = new Mesh();
 		mesh.name = "koko_Grid_" + randomIdx.ToString();
 
-		// Vector3[] vertices = new Vector3[4]{
-		// 	basePos_,
-		// 	basePos_ + Vector3.right * w_,
-		// 	basePos_ + Vector3.right * w_ + Vector3.up * h_,
-		// 	basePos_ + Vector3.up * h_
-		// };
 		Vector3[] vertices = rectInfo_.GetCornerVertices();
 
 		Vector2[] uv = new Vector2[4]{ 
@@ -69,6 +63,18 @@ public static class FBXCreator_2
     }
 
 
+
+	public static void DrawPointGO( Transform parentTF_, Vector3 pos_, float radius_ ) 
+	{
+		var newgo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+		var tf = newgo.transform;
+		tf.SetParent(parentTF_);
+		tf.position = pos_;
+		tf.localScale = new Vector3( radius_,radius_,radius_ );
+
+		var sharedMaterial = tf.GetComponent<MeshRenderer>().sharedMaterial;
+		sharedMaterial.SetColor( "_BaseColor", Color.red );
+	}
 	
 
 

@@ -42,6 +42,11 @@ public class RectInfo
         return vertices;
     }
 
+    public Vector3 GetCenterPos() 
+    {
+        return basePos + Vector3.right * w * 0.5f + Vector3.up * h * 0.5f;
+    }
+
     
 
 

@@ -44,6 +44,8 @@ public class Cell
     {
         partition = new Partition( this, partitionDirection_, t_ );
 
+        Vector3[] partitionCornerVertices = partition.rectInfo.GetCornerVertices();
+
         if(partitionDirection_ == PartitionDirection.Vertical) 
         {
             float leftW = W * t_;
@@ -74,15 +76,16 @@ public class Cell
                 }
             );
 
+            // 连接 下边 partition:
             if( neighborPartitions[0] != null ) 
             {
-                // neighborPartitions[0].AddJointedVertices(
-
-                // );
+                neighborPartitions[0].AddJointedVertices(partitionCornerVertices[0], partitionCornerVertices[1]);
             }
-
-
-
+            // 连接 上边 partition:
+            if( neighborPartitions[2] != null ) 
+            {
+                neighborPartitions[2].AddJointedVertices(partitionCornerVertices[3], partitionCornerVertices[2]);
+            }
         }
         else 
         {
@@ -113,6 +116,17 @@ public class Cell
                     neighborPartitions[3]
                 }
             );
+
+            // 连接 左边 partition:
+            if( neighborPartitions[3] != null ) 
+            {
+                neighborPartitions[3].AddJointedVertices(partitionCornerVertices[0], partitionCornerVertices[3]);
+            }
+            // 连接 右边 partition:
+            if( neighborPartitions[1] != null ) 
+            {
+                neighborPartitions[1].AddJointedVertices(partitionCornerVertices[1], partitionCornerVertices[2]);
+            }
         }
     }
 

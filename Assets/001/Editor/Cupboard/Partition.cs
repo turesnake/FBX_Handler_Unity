@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing.Printing;
 using UnityEngine;
 
+using mattatz.Triangulation2DSystem;
 
 namespace Cupboard{
 
@@ -20,8 +21,9 @@ public class Partition
 
     Vector3 from,   // left/bottom
             to;     // right/top
+    public RectInfo rectInfo;
 
-    public List<Vector3> jointedVertices = new List<Vector3>(); // 别的 partition 连上来的 连接点 (一定是成对添加的)
+    public List<Vector3> vertices; // 前4个顶点为边角: { leftBottom, rightBottom, rightTop, leftTop }, 后续的为 别的 partition 连上来的 连接点 (一定是成对添加的)
 
 
     public Partition( Cell parent_, PartitionDirection partitionDirection_, float t_ ) 
@@ -34,11 +36,23 @@ public class Partition
         {
             from = parentCell.BasePos + Vector3.right * parentCell.W * t; // bottom
             to = from + Vector3.up * parentCell.H; // top
+            //---
+            rectInfo = new RectInfo(
+                from - Vector3.right * CupboardStates.partitionRadius, 
+                CupboardStates.partitionRadius * 2f, 
+                parentCell.H
+            );
         }
         else 
         {
             from = parentCell.BasePos + Vector3.up * parentCell.H * t; // left
             to = from + Vector3.right * parentCell.W; // right 
+            //---
+            rectInfo = new RectInfo(
+                from - Vector3.up * CupboardStates.partitionRadius, 
+                parentCell.W,
+                CupboardStates.partitionRadius * 2f
+            );
         }
 
         //-- 有一定几率, 这个 partition 整个一条都是浸润的:
@@ -46,14 +60,32 @@ public class Partition
         {
             SetAllInfiltrating();
         }
+
+        // 塞入 4 个边角顶点:
+        vertices = new List<Vector3>( rectInfo.GetCornerVertices() );
+
+
+        // 试验: 长边塞入一对顶点:
+        if( partitionDirection_ == PartitionDirection.Vertical )
+        {
+            vertices.Add( (vertices[0] + vertices[3]) * 0.5f );
+            vertices.Add( (vertices[1] + vertices[2]) * 0.5f );
+        }
+        else 
+        {
+            vertices.Add( (vertices[0] + vertices[1]) * 0.5f );
+            vertices.Add( (vertices[3] + vertices[2]) * 0.5f );
+        }
+
+
     }
 
     
 
     public void AddJointedVertices( Vector3 a_, Vector3 b_ ) 
     {
-        jointedVertices.Add( a_ );
-        jointedVertices.Add( b_ );
+        vertices.Add( a_ );
+        vertices.Add( b_ );
     }
 
 
@@ -80,7 +112,6 @@ public class Partition
 
         foreach( var tSeg in infiltrating_Ts.segments ) 
         {
-
             Vector3 segFrom = from + from2to * tSeg.head;
             Vector3 segTo   = from + from2to * tSeg.end;
 
@@ -114,6 +145,60 @@ public class Partition
         float ret = dotVal / from2to.magnitude;
         Debug.Log( "计算 t = " + ret );
         return Mathf.Clamp01(ret);
+    }
+
+
+    public void DrawAllVertices(Transform parentTF_) 
+    {
+        foreach( var pos in vertices )
+        {
+            FBXCreator_2.DrawPointGO(parentTF_, pos, 0.2f );
+        }
+    }
+
+
+    // 排序之后才方便被 Triangulation2DSystem 自动生成 三角形信息;
+    void SortVerties() 
+    {
+        Vector3 centerPos = rectInfo.GetCenterPos();
+
+        var baseDir = ( partitionDirection == PartitionDirection.Vertical ) ? Vector3.up : Vector3.right;
+
+        vertices.Sort( (a, b) =>{
+            float angleA= Vector3.SignedAngle( baseDir, a - centerPos, Vector3.forward );
+            float angleB= Vector3.SignedAngle( baseDir, b - centerPos, Vector3.forward );
+            return (angleA < angleB) ? -1 : 1; 
+        } );
+    }
+
+
+    public void BuildMesh() 
+    {
+        SortVerties();
+
+        Vector2[] vectors2D = new Vector2[vertices.Count];
+        for( int i=0; i<vertices.Count; i++ )
+        {
+            vectors2D[i] = vertices[i];
+        }
+
+        // construct Polygon2D 
+        Polygon2D polygon = Polygon2D.Contour(vectors2D);
+        // construct Triangulation2D with Polygon2D and threshold angle (18f ~ 27f recommended) 22.5f
+        float thresholdAngle = 0.1f; // 这个角度足够小后, 插件就不会自作主张添加新顶点了;
+        Triangulation2D triangulation = new Triangulation2D(polygon, thresholdAngle );
+        // build a mesh from triangles in a Triangulation2D instance -- 没设置 uv 值
+        Mesh mesh = triangulation.Build();
+
+        // 装配 vertices, triangles
+        for( int i=0; i<mesh.triangles.Length; i++ ) 
+        {
+            Vector3 pos = mesh.vertices[mesh.triangles[i]];
+            int vertexIdx = CupboardStates.GetVertexIdx(pos);
+            CupboardStates.triangles.Add( vertexIdx );
+        }
+
+
     }
     
 

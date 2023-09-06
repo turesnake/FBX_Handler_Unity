@@ -24,28 +24,33 @@ public static class DelaunayTest
         List<Vector2> points = new List<Vector2>();
 
         // Add Vector2 to points
-
         // 顺序不要乱填
-        // points.Add(new Vector2(0f, 10f));
-        // points.Add(new Vector2(0f, 0f));
-        // points.Add(new Vector2(1f, 0f));
         
-        // points.Add(new Vector2(1f, 1f));
-        // points.Add(new Vector2(1f, 2f));
-        // points.Add(new Vector2(1f, 10f));
-
-        // ---
+        
         points.Add(new Vector2(0f, 0f));
-        points.Add(new Vector2(10f, 0f));
-        points.Add(new Vector2(10f, 1f));
+
+        points.Add(new Vector2(1f, 0f));
+        points.Add(new Vector2(1f, 0.5f));
         points.Add(new Vector2(1f, 1f));
+
         points.Add(new Vector2(1f, 9f));
-        points.Add(new Vector2(10f, 9f));
-        points.Add(new Vector2(10f, 10f));
+        points.Add(new Vector2(1f, 9.5f));
+        points.Add(new Vector2(1f, 10f));
+
         points.Add(new Vector2(0f, 10f));
 
 
-        
+
+
+        // points.Add(new Vector2(0f, 0f));
+        // points.Add(new Vector2(10f, 0f));
+        // points.Add(new Vector2(10f, 1f));
+        // points.Add(new Vector2(1f, 1f));
+        // points.Add(new Vector2(1f, 9f));
+        // points.Add(new Vector2(10f, 9f));
+        // points.Add(new Vector2(10f, 10f));
+        // points.Add(new Vector2(0f, 10f));
+
 
         // construct Polygon2D 
         Polygon2D polygon = Polygon2D.Contour(points.ToArray());
@@ -102,6 +107,34 @@ public static class DelaunayTest
         {
             Debug.Log( item.ToString() );
         }
+
+    }
+
+
+
+
+    [MenuItem("Tools/---测试---")]
+    public static void SomeTest()
+    {
+
+        // Vector3 a = new Vector3( 0.001f, 0.3f, 0.06f );
+        // Vector3 b = new Vector3( 0.001f, 0.3f, 0.06f );
+
+        // int aHash = a.GetHashCode();
+        // int bHash = b.GetHashCode();
+
+        // Debug.Log( string.Format("aHash:{0}, bHash{1}", aHash, bHash) );
+
+
+        Vector3 k = new Vector3( 0.00315321f, 0.3234546f, 1200.06654123f );
+        Vector3 newk = CupboardStates.LimitVector3Precision(k);
+
+        var hash = CupboardStates.GetVertexHash(newk);
+        Debug.Log( "hash :" + hash );
+
+        // Debug.Log( string.Format("x:{0}, y:{1}, z:{2}", newk.x, newk.y, newk.z  ) );
+
+
 
     }
 

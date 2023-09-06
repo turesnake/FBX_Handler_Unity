@@ -2,17 +2,17 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using UnityEditor.Formats.Fbx.Exporter;
+
+
 
 namespace Cupboard{
-
-
-
-
-
 
 public static class CupboardUtils
 {
     
+
+
     // 测试用 物体表:
     static List<Candidate> fadeCandidates = new List<Candidate>(){
 
@@ -54,6 +54,7 @@ public static class CupboardUtils
 
     public static void Do() 
     {
+        CupboardStates.Clear();
 
         SetMinGap( ref fadeCandidates);
 
@@ -78,6 +79,8 @@ public static class CupboardUtils
         //DebugCell( rootCell, "Root" );
         var rootGO = new GameObject("root_Cupboard");
         DebugCell2( rootCell, rootGO );
+
+        CreatePartitionGameObj();
 
     }
 
@@ -190,13 +193,6 @@ public static class CupboardUtils
 
 
 
-
-
-
-
-
-
-
     static bool IsCellBigEnough( Cell cell_, Candidate candidate_ ) 
     {
         return ( cell_.W >= candidate_.aabb.x && cell_.H >= candidate_.aabb.y );
@@ -241,10 +237,16 @@ public static class CupboardUtils
             selfGO = new GameObject("partition");
             selfGO.transform.SetParent( parent_.transform );
 
+            // todo: 先不画
             foreach( var rInfo in partition.GetInfiltratingRectInfos() ) 
             {
                 FBXCreator_2.CreateQuadGameObj( selfGO, rInfo, color, "partition_segment" );
             }
+
+            partition.DrawAllVertices(selfGO.transform);
+
+            // ---
+            partition.BuildMesh();
         }
 
         DebugCell2( cell_.cell_LB, selfGO );
@@ -276,6 +278,56 @@ public static class CupboardUtils
         CupboardStates.minGap = minGap;
     }
 
+
+    // 全局唯一的 partition mesh go
+    static void CreatePartitionGameObj() 
+    {
+
+		string name = "Partition_000";
+        var newgo = new GameObject(name);
+		//newgo.transform.SetParent( parent_.transform );
+
+        // --- 随机颜色 --
+        MeshRenderer meshRenderer = newgo.AddComponent<MeshRenderer>();
+        meshRenderer.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        Color color = Random.ColorHSV(0.3f, 0.4f, 0.05f,0.1f, 0.1f, 0.2f); // 隔板颜色
+        meshRenderer.sharedMaterial.SetColor("_BaseColor", color );
+
+        // --- mesh:
+        MeshFilter meshFilter = newgo.AddComponent<MeshFilter>();
+
+        Mesh mesh = new Mesh();
+		mesh.name = "partition_Grid";
+
+		//Vector3[] vertices = rectInfo_.GetCornerVertices();
+
+		// Vector2[] uv = new Vector2[4]{ 
+		// 	new Vector2( 0f, 0f),
+		// 	new Vector2( 1f, 0f),
+		// 	new Vector2( 1f, 1f),
+		// 	new Vector2( 0f, 1f)
+		// };
+
+		// Vector4 tangent = new Vector4(1f, 0f, 0f, -1f);
+		// Vector4[] tangents = new Vector4[4]{ tangent, tangent, tangent, tangent };
+		
+		mesh.vertices = CupboardStates.vertices.ToArray();
+		//mesh.uv = uv;
+		//mesh.tangents = tangents;
+
+		
+		mesh.triangles = CupboardStates.triangles.ToArray();
+		mesh.RecalculateNormals();
+		//---
+		meshFilter.mesh = mesh;
+
+        // --- save to fbx:
+        string filePath = System.IO.Path.Combine(Application.dataPath, name + ".fbx");
+        //ModelExporter.ExportObject(filePath, Selection.objects[0]);
+        ModelExporter.ExportObject(filePath, newgo );
+
+
+    }
 
 }
 
