@@ -57,7 +57,10 @@ public static class CupboardStates
 
     public static float partitionRadius  = 0.15f; // 隔板厚度半径 0.25f
 
-    public static float partitionInnDepth = 3f; // 柜子内深
+    public static float outFrameWidth = 0.4f; // 边框宽度
+
+    public static float partitionInnDepth = 2.0f; // 柜子内深
+
 
     public static float partitionFullInfiltratingPercent  = 1f; // 有些隔板整个都会被保留, 不会被删减, 选择保留的随机百分比; 推荐: 0.5ff
 

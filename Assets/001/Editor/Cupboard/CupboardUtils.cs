@@ -63,11 +63,12 @@ public static class CupboardUtils
         List<Partition> partitions = new List<Partition>();
 
 
+        // -- 生成 内隔板:
         Cell rootCell = new Cell( 
             new RectInfo(
-                Vector3.zero + Vector3.right * CupboardStates.partitionRadius + Vector3.up * CupboardStates.partitionRadius,
-                CupboardStates.cupboardWidth - CupboardStates.partitionRadius,
-                CupboardStates.cupboardHeight - CupboardStates.partitionRadius
+                Vector3.zero + Vector3.right * CupboardStates.outFrameWidth + Vector3.up * CupboardStates.outFrameWidth,
+                CupboardStates.cupboardWidth - CupboardStates.outFrameWidth * 2f,
+                CupboardStates.cupboardHeight - CupboardStates.outFrameWidth * 2f
             ),
             new Partition[4]{null,null,null,null},
             innPartitionsMesh
@@ -86,18 +87,21 @@ public static class CupboardUtils
         var rootGO = new GameObject("root_Cupboard");
         DebugCell2( rootCell, rootGO, partitions );
 
-
-        
-        //innPartitionsMesh.Debug_edgeHash_2_usedTimes();
-
-
         foreach( var partition in partitions )
         {
             partition.SearchOutEdgeAndBuildInnFace();
         }
 
-        CreatePartitionGameObj(innPartitionsMesh);
+        GameObject innGO = BuildInnPartitionGameObj(innPartitionsMesh);
 
+        // -- 生成 外框:
+        GameObject outGO = BuildOutFrameGameObj( new Vector3( 0f,0f,0f ) );
+
+        
+        // --- save to fbx:
+        string filePath = System.IO.Path.Combine(Application.dataPath, "Capboard_tpr.fbx");
+        GameObject[] fbxGOs = new GameObject[]{ innGO, outGO };
+        ModelExporter.ExportObjects(filePath, fbxGOs );
     }
 
 
@@ -300,7 +304,7 @@ public static class CupboardUtils
 
 
     // 全局唯一的 partition mesh go
-    static void CreatePartitionGameObj( MyMesh myMesh_ )
+    static GameObject BuildInnPartitionGameObj( MyMesh myMesh_ )
     {
 
 		string name = "Partition_000";
@@ -324,30 +328,43 @@ public static class CupboardUtils
 		//---
 		meshFilter.mesh = myMesh_.GetMesh("partition_Grid");
 
+        return newgo;
+
         // --- save to fbx:
-        string filePath = System.IO.Path.Combine(Application.dataPath, name + ".fbx");
-        //ModelExporter.ExportObject(filePath, Selection.objects[0]);
-        ModelExporter.ExportObject(filePath, newgo );
+        // string filePath = System.IO.Path.Combine(Application.dataPath, name + ".fbx");
+        // //ModelExporter.ExportObject(filePath, Selection.objects[0]);
+        // ModelExporter.ExportObject(filePath, newgo );
     }
 
 
 
     // ========================================== 柜子外壳 ===============================================
 
-    static void BuildOutShell()
+    static GameObject BuildOutFrameGameObj( Vector3 outPosLB_ )
     {
 
-        MyMesh outShellMesh = new MyMesh();
+        OutFrame outFrame = new OutFrame( outPosLB_, CupboardStates.cupboardWidth, CupboardStates.cupboardHeight, CupboardStates.outFrameWidth );
 
+        string name = "OutFrame";
+        var newgo = new GameObject(name);  
 
-        
+        // --- 随机颜色 --
+        MeshRenderer meshRenderer = newgo.AddComponent<MeshRenderer>();
+        meshRenderer.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        Color color = Random.ColorHSV(0.8f, 0.9f, 0.05f,0.1f, 0.1f, 0.2f); // 隔板颜色
+        meshRenderer.sharedMaterial.SetColor("_BaseColor", color );
 
+        // --- mesh:
+        MeshFilter meshFilter = newgo.AddComponent<MeshFilter>();
 
+        meshFilter.mesh = outFrame.myMesh.GetMesh("out_frame");
 
+        return newgo;
 
-
-
-
+        // --- save to fbx:
+        // string filePath = System.IO.Path.Combine(Application.dataPath, name + ".fbx");
+        // //ModelExporter.ExportObject(filePath, Selection.objects[0]);
+        // ModelExporter.ExportObject(filePath, newgo );
     }
 
 
