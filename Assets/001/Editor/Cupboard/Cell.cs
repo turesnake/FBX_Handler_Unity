@@ -23,6 +23,8 @@ public class Cell
     public float W => rectInfo.w;
     public float H => rectInfo.h;
 
+    public MyMesh myMesh;
+
 
 
     public override string ToString() 
@@ -32,11 +34,12 @@ public class Cell
     }
 
 
-    public Cell( RectInfo rectInfo_, Partition[] neighborPartitions_ )
+    public Cell( RectInfo rectInfo_, Partition[] neighborPartitions_, MyMesh myMesh_ )
     {
         rectInfo = rectInfo_;
         Debug.Assert(neighborPartitions_.Length == 4);
         neighborPartitions = neighborPartitions_;
+        myMesh = myMesh_;
     }
 
 
@@ -60,7 +63,8 @@ public class Cell
                     partition,
                     neighborPartitions[2],
                     neighborPartitions[3]
-                }
+                },
+                myMesh
             );
             cell_RT = new Cell( 
                 new RectInfo(
@@ -73,7 +77,8 @@ public class Cell
                     neighborPartitions[1],
                     neighborPartitions[2],
                     partition
-                }
+                },
+                myMesh
             );
 
             // 连接 下边 partition:
@@ -101,7 +106,8 @@ public class Cell
                     neighborPartitions[1],
                     partition,
                     neighborPartitions[3]
-                }
+                },
+                myMesh
             );
             cell_RT = new Cell( 
                 new RectInfo(
@@ -114,7 +120,8 @@ public class Cell
                     neighborPartitions[1],
                     neighborPartitions[2],
                     neighborPartitions[3]
-                }
+                },
+                myMesh
             );
 
             // 连接 左边 partition:
@@ -130,7 +137,7 @@ public class Cell
         }
     }
 
-
+    // 填入 物品, 并将覆盖区域的 partition segment 浸润
     public void SetCandidate( Candidate candidate_ ) 
     {
         Debug.Assert( candidate_ != null );

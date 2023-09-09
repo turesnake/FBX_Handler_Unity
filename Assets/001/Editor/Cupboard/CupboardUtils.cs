@@ -58,13 +58,19 @@ public static class CupboardUtils
 
         SetMinGap( ref fadeCandidates);
 
+        MyMesh innPartitionsMesh = new MyMesh();
+
+        List<Partition> partitions = new List<Partition>();
+
+
         Cell rootCell = new Cell( 
             new RectInfo(
                 Vector3.zero + Vector3.right * CupboardStates.partitionRadius + Vector3.up * CupboardStates.partitionRadius,
                 CupboardStates.cupboardWidth - CupboardStates.partitionRadius,
                 CupboardStates.cupboardHeight - CupboardStates.partitionRadius
             ),
-            new Partition[4]{null,null,null,null}
+            new Partition[4]{null,null,null,null},
+            innPartitionsMesh
         );
         emptyCells.Clear();
         emptyCells.Add( rootCell );
@@ -78,9 +84,19 @@ public static class CupboardUtils
         // --- debug:
         //DebugCell( rootCell, "Root" );
         var rootGO = new GameObject("root_Cupboard");
-        DebugCell2( rootCell, rootGO );
+        DebugCell2( rootCell, rootGO, partitions );
 
-        CreatePartitionGameObj();
+
+        
+        //innPartitionsMesh.Debug_edgeHash_2_usedTimes();
+
+
+        foreach( var partition in partitions )
+        {
+            partition.SearchOutEdgeAndBuildInnFace();
+        }
+
+        CreatePartitionGameObj(innPartitionsMesh);
 
     }
 
@@ -213,12 +229,14 @@ public static class CupboardUtils
     }
 
 
-    static void DebugCell2( Cell cell_, GameObject parent_ ) 
+    static void DebugCell2( Cell cell_, GameObject parent_, List<Partition> partitions_ ) 
     {
         if( cell_ == null ) 
         {
             return;
         }
+
+        
 
         GameObject selfGO = null;
         if( cell_.IsLeaf() ) 
@@ -247,10 +265,12 @@ public static class CupboardUtils
 
             // ---
             partition.BuildMesh();
+            partitions_.Add(partition);
         }
 
-        DebugCell2( cell_.cell_LB, selfGO );
-        DebugCell2( cell_.cell_RT, selfGO );
+    
+        DebugCell2( cell_.cell_LB, selfGO, partitions_ );
+        DebugCell2( cell_.cell_RT, selfGO, partitions_ );
     }
 
 
@@ -280,7 +300,7 @@ public static class CupboardUtils
 
 
     // 全局唯一的 partition mesh go
-    static void CreatePartitionGameObj() 
+    static void CreatePartitionGameObj( MyMesh myMesh_ )
     {
 
 		string name = "Partition_000";
@@ -296,19 +316,42 @@ public static class CupboardUtils
         // --- mesh:
         MeshFilter meshFilter = newgo.AddComponent<MeshFilter>();
 
-        Mesh mesh = new Mesh();
-		mesh.name = "partition_Grid";
-		mesh.vertices = CupboardStates.GetVertices().ToArray();
-		mesh.triangles = CupboardStates.triangles.ToArray();
-		mesh.RecalculateNormals();
+        // Mesh mesh = new Mesh();
+		// mesh.name = "partition_Grid";
+		// mesh.vertices = CupboardStates.GetVertices().ToArray();
+		// mesh.triangles = CupboardStates.triangles.ToArray();
+		// mesh.RecalculateNormals();
 		//---
-		meshFilter.mesh = mesh;
+		meshFilter.mesh = myMesh_.GetMesh("partition_Grid");
 
         // --- save to fbx:
         string filePath = System.IO.Path.Combine(Application.dataPath, name + ".fbx");
         //ModelExporter.ExportObject(filePath, Selection.objects[0]);
         ModelExporter.ExportObject(filePath, newgo );
     }
+
+
+
+    // ========================================== 柜子外壳 ===============================================
+
+    static void BuildOutShell()
+    {
+
+        MyMesh outShellMesh = new MyMesh();
+
+
+        
+
+
+
+
+
+
+
+    }
+
+
+
 
 }
 

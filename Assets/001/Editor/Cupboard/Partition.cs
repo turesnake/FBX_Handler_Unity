@@ -23,16 +23,19 @@ public class Partition
             to;     // right/top
     public RectInfo rectInfo;
 
-    public List<Vector3> vertices; // 前4个顶点为边角: { leftBottom, rightBottom, rightTop, leftTop }, 后续的为 别的 partition 连上来的 连接点 (一定是成对添加的)
+    public List<Vector3> vertexPoses; // 前4个顶点为边角: { leftBottom, rightBottom, rightTop, leftTop }, 后续的为 别的 partition 连上来的 连接点 (一定是成对添加的)
 
     // todo: 暂时没用上...
     bool isLeftBottomSideAddVertices = false;
     bool isRightTopSideAddVertices = false;
 
+    MyMesh myMesh;
+
 
     public Partition( Cell parent_, PartitionDirection partitionDirection_, float t_ ) 
     {
         parentCell = parent_;
+        myMesh = parentCell.myMesh;
         partitionDirection = partitionDirection_;
         t = t_;
         //---
@@ -66,7 +69,7 @@ public class Partition
         }
 
         // 塞入 4 个边角顶点:
-        vertices = new List<Vector3>( rectInfo.GetCornerVertices() );
+        vertexPoses = new List<Vector3>( rectInfo.GetCornerVertices() );
 
 
         // // 试验: 长边塞入一对顶点:
@@ -90,8 +93,8 @@ public class Partition
 
     public void AddJointedVertices( Vector3 a_, Vector3 b_, PartitionSide partitionSide_ ) 
     {
-        vertices.Add( a_ );
-        vertices.Add( b_ );
+        vertexPoses.Add( a_ );
+        vertexPoses.Add( b_ );
         if(partitionSide_ == PartitionSide.LeftBottom)
         {
             isLeftBottomSideAddVertices = true;
@@ -162,9 +165,10 @@ public class Partition
     }
 
 
+    // 用红球标出顶点
     public void DrawAllVertices(Transform parentTF_) 
     {
-        foreach( var pos in vertices )
+        foreach( var pos in vertexPoses )
         {
             FBXCreator_2.DrawPointGO(parentTF_, pos, 0.2f );
         }
@@ -172,18 +176,18 @@ public class Partition
 
 
     // 排序之后才方便被 Triangulation2DSystem 自动生成 三角形信息;
-    void SortVerties() 
-    {
-        Vector3 centerPos = rectInfo.GetCenterPos();
+    // void SortVerties() 
+    // {
+    //     Vector3 centerPos = rectInfo.GetCenterPos();
 
-        var baseDir = ( partitionDirection == PartitionDirection.Vertical ) ? Vector3.up : Vector3.right;
+    //     var baseDir = ( partitionDirection == PartitionDirection.Vertical ) ? Vector3.up : Vector3.right;
 
-        vertices.Sort( (a, b) =>{
-            float angleA= Vector3.SignedAngle( baseDir, a - centerPos, Vector3.forward );
-            float angleB= Vector3.SignedAngle( baseDir, b - centerPos, Vector3.forward );
-            return (angleA < angleB) ? -1 : 1; 
-        } );
-    }
+    //     vertexPoses.Sort( (a, b) =>{
+    //         float angleA= Vector3.SignedAngle( baseDir, a - centerPos, Vector3.forward );
+    //         float angleB= Vector3.SignedAngle( baseDir, b - centerPos, Vector3.forward );
+    //         return (angleA < angleB) ? -1 : 1; 
+    //     } );
+    // }
 
 
 
@@ -214,11 +218,10 @@ public class Partition
         }
 
         List<PPos> PPoses = new List<PPos>();
-        for( int k=0; k<vertices.Count; k++ ) 
+        for( int k=0; k<vertexPoses.Count; k++ ) 
         {
-            float v =  Vector3.SignedAngle( checkDir, vertices[k] - centerPos, Vector3.forward );
-            //Debug.Log( "v = " + v );
-            PPoses.Add( new PPos( vertices[k], v ) );
+            float v =  Vector3.SignedAngle( checkDir, vertexPoses[k] - centerPos, Vector3.forward );
+            PPoses.Add( new PPos( vertexPoses[k], v ) );
         }
 
         List<PPos> pPoses_LB = new List<PPos>(); // 负值
@@ -271,6 +274,8 @@ public class Partition
         List<PPos> smlPPos = is_LB_sml ? pPoses_LB : pPoses_RT;     // 短列
         List<PPos> bigPPos  = is_LB_sml ? pPoses_RT : pPoses_LB;    // 长列
 
+        Vector3 normal = Vector3.back;
+
         // 拼出所有 四边形:
         int i = 1;
         for( ; i < lenSml; i++ )
@@ -278,14 +283,14 @@ public class Partition
             if(partitionDirection == PartitionDirection.Vertical)
             {
                 var noUse = is_LB_sml ?
-                    FourVertices( smlPPos[i-1], bigPPos[i-1], bigPPos[i], smlPPos[i] ) :
-                    FourVertices( bigPPos[i-1], smlPPos[i-1], smlPPos[i], bigPPos[i] );
+                    myMesh.FourVertices( smlPPos[i-1].pos, bigPPos[i-1].pos, bigPPos[i].pos, smlPPos[i].pos,    normal ) :
+                    myMesh.FourVertices( bigPPos[i-1].pos, smlPPos[i-1].pos, smlPPos[i].pos, bigPPos[i].pos,    normal );
             }
             else 
             {
                 var noUse = is_LB_sml ?
-                    FourVertices( smlPPos[i-1], smlPPos[i], bigPPos[i], bigPPos[i-1] ) :
-                    FourVertices( smlPPos[i-1], bigPPos[i-1], bigPPos[i], smlPPos[i] );
+                    myMesh.FourVertices( smlPPos[i-1].pos, smlPPos[i].pos, bigPPos[i].pos, bigPPos[i-1].pos,        normal ) :
+                    myMesh.FourVertices( smlPPos[i-1].pos, bigPPos[i-1].pos, bigPPos[i].pos, smlPPos[i].pos,        normal );
             }
         }
 
@@ -295,49 +300,92 @@ public class Partition
             if(partitionDirection == PartitionDirection.Vertical)
             {
                 var noUse = is_LB_sml ? 
-                    ThreeVertices( smlPPos[lenSml-1], bigPPos[i], bigPPos[i-1] ) :
-                    ThreeVertices( smlPPos[lenSml-1], bigPPos[i-1], bigPPos[i] );
+                    myMesh.ThreeVertices( smlPPos[lenSml-1].pos, bigPPos[i].pos, bigPPos[i-1].pos,  normal ) :
+                    myMesh.ThreeVertices( smlPPos[lenSml-1].pos, bigPPos[i-1].pos, bigPPos[i].pos,  normal );
             }
             else 
             {
                 var noUse = is_LB_sml ? 
-                        ThreeVertices( smlPPos[lenSml-1], bigPPos[i-1], bigPPos[i] ) :
-                        ThreeVertices(  bigPPos[i-1], smlPPos[lenSml-1], bigPPos[i] );
+                    myMesh.ThreeVertices( smlPPos[lenSml-1].pos, bigPPos[i-1].pos, bigPPos[i].pos,  normal ) :
+                    myMesh.ThreeVertices(  bigPPos[i-1].pos, smlPPos[lenSml-1].pos, bigPPos[i].pos, normal );
             }
         }
     }
 
 
-    // 拿着 4个顶点,拼出两个三角形
-    public int FourVertices( PPos lb_, PPos rb_, PPos rt_, PPos lt_ ) 
-    {
 
-        int idx_0 = CupboardStates.GetVertexIdx(lb_.pos);
-        int idx_1 = CupboardStates.GetVertexIdx(rb_.pos);
-        int idx_2 = CupboardStates.GetVertexIdx(rt_.pos);
-        int idx_3 = CupboardStates.GetVertexIdx(lt_.pos);
+    // 遍历 partition 四周一圈边, 若某个边是 单面边, 就立刻为它建立 inn face
+    public void SearchOutEdgeAndBuildInnFace() 
+    {        
+        Vector3 centerPos = rectInfo.GetCenterPos();
 
-        CupboardStates.triangles.Add( idx_3 );
-        CupboardStates.triangles.Add( idx_2 );
-        CupboardStates.triangles.Add( idx_1 );
-        // 
-        CupboardStates.triangles.Add( idx_3 );
-        CupboardStates.triangles.Add( idx_1 );
-        CupboardStates.triangles.Add( idx_0 );
-        return 0;
+        var baseDir = ( partitionDirection == PartitionDirection.Vertical ) ? Vector3.up : Vector3.right;
+
+        vertexPoses.Sort( (a, b) =>{
+            float angleA= Vector3.SignedAngle( baseDir, a - centerPos, Vector3.forward );
+            float angleB= Vector3.SignedAngle( baseDir, b - centerPos, Vector3.forward );
+            return (angleA < angleB) ? -1 : 1; 
+        } );
+
+        Vector3 normal = Vector3.up;
+
+        for( int l=0; l<vertexPoses.Count; l++ )
+        {
+            int r = (l==vertexPoses.Count-1) ? 0 : l+1;
+            //---
+            Vector3 pos_l = vertexPoses[l];
+            Vector3 pos_r = vertexPoses[r];
+            if( myMesh.IsEdgeOnTheBorder(pos_l,pos_r) == false )
+            {
+                continue;
+            }
+            Vector3 moveInn = Vector3.forward * CupboardStates.partitionInnDepth;
+
+            
+            myMesh.FourVertices( pos_l + moveInn, pos_r + moveInn, pos_r, pos_l,    normal );
+        }
     }
+
+
+
+
+    // // 拿着 4个顶点,拼出两个三角形
+    // public int FourVertices( Vector3 lb_, Vector3 rb_, Vector3 rt_, Vector3 lt_ ) 
+    // {
+
+    //     int idx_0 = CupboardStates.GetVertexIdx(lb_);
+    //     int idx_1 = CupboardStates.GetVertexIdx(rb_);
+    //     int idx_2 = CupboardStates.GetVertexIdx(rt_);
+    //     int idx_3 = CupboardStates.GetVertexIdx(lt_);
+
+    //     ConnectVerticesToTriangle( idx_3, idx_2, idx_1 );
+    //     ConnectVerticesToTriangle( idx_3, idx_1, idx_0 );
+    //     return 0;
+    // }
+
+    // // 顺时针 3 个点:
+    // public int ThreeVertices( Vector3 pos_0, Vector3 pos_1, Vector3 pos_2 ) 
+    // {
+    //     int idx_0 = CupboardStates.GetVertexIdx(pos_0);
+    //     int idx_1 = CupboardStates.GetVertexIdx(pos_1);
+    //     int idx_2 = CupboardStates.GetVertexIdx(pos_2);
+    //     ConnectVerticesToTriangle( idx_0, idx_1, idx_2 );
+    //     return 0;
+    // }
 
     // 顺时针 3 个点:
-    public int ThreeVertices( PPos ppos_0, PPos ppos_1, PPos ppos_2 ) 
-    {
-        int idx_0 = CupboardStates.GetVertexIdx(ppos_0.pos);
-        int idx_1 = CupboardStates.GetVertexIdx(ppos_1.pos);
-        int idx_2 = CupboardStates.GetVertexIdx(ppos_2.pos);
-        CupboardStates.triangles.Add( idx_0 );
-        CupboardStates.triangles.Add( idx_1 );
-        CupboardStates.triangles.Add( idx_2 );
-        return 0;
-    }
+    // public void ConnectVerticesToTriangle( int idx_0, int idx_1, int idx_2 ) 
+    // {
+    //     CupboardStates.triangles.Add( idx_0 );
+    //     CupboardStates.triangles.Add( idx_1 );
+    //     CupboardStates.triangles.Add( idx_2 );
+
+    //     CupboardStates.RecordEdge( idx_0, idx_1 );
+    //     CupboardStates.RecordEdge( idx_0, idx_2 );
+    //     CupboardStates.RecordEdge( idx_1, idx_2 );
+
+
+    // }
 
 
 

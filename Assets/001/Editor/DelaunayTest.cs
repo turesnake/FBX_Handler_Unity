@@ -126,11 +126,11 @@ public static class DelaunayTest
         // Debug.Log( string.Format("aHash:{0}, bHash{1}", aHash, bHash) );
 
 
-        Vector3 k = new Vector3( 0.00315321f, 0.3234546f, 1200.06654123f );
-        Vector3 newk = CupboardStates.LimitVector3Precision(k);
+        // Vector3 k = new Vector3( 0.00315321f, 0.3234546f, 1200.06654123f );
+        // Vector3 newk = CupboardStates.LimitVector3Precision(k);
 
-        var hash = CupboardStates.GetVertexHash(newk);
-        Debug.Log( "hash :" + hash );
+        // var hash = CupboardStates.GetVertexHash(newk);
+        // Debug.Log( "hash :" + hash );
 
         // Debug.Log( string.Format("x:{0}, y:{1}, z:{2}", newk.x, newk.y, newk.z  ) );
 
