@@ -16,7 +16,7 @@ public class Partition
     public float t = 0.5f; // [0f,1f] 切一刀的位置
     public Cell parentCell = null;
 
-    public SegmentMerge infiltrating_Ts = new SegmentMerge(); // 浸润的 t 值区间; 非浸润区将在建模时被剔除 
+    public Segment1DMerge infiltrating_Ts = new Segment1DMerge(); // 浸润的 t 值区间; 非浸润区将在建模时被剔除 
 
 
     Vector3 from,   // left/bottom
@@ -24,6 +24,10 @@ public class Partition
     public RectInfo rectInfo;
 
     public List<Vector3> vertices; // 前4个顶点为边角: { leftBottom, rightBottom, rightTop, leftTop }, 后续的为 别的 partition 连上来的 连接点 (一定是成对添加的)
+
+    // todo: 暂时没用上...
+    bool isLeftBottomSideAddVertices = false;
+    bool isRightTopSideAddVertices = false;
 
 
     public Partition( Cell parent_, PartitionDirection partitionDirection_, float t_ ) 
@@ -65,27 +69,37 @@ public class Partition
         vertices = new List<Vector3>( rectInfo.GetCornerVertices() );
 
 
-        // 试验: 长边塞入一对顶点:
-        if( partitionDirection_ == PartitionDirection.Vertical )
-        {
-            vertices.Add( (vertices[0] + vertices[3]) * 0.5f );
-            vertices.Add( (vertices[1] + vertices[2]) * 0.5f );
-        }
-        else 
-        {
-            vertices.Add( (vertices[0] + vertices[1]) * 0.5f );
-            vertices.Add( (vertices[3] + vertices[2]) * 0.5f );
-        }
+        // // 试验: 长边塞入一对顶点:
+        // if( partitionDirection_ == PartitionDirection.Vertical )
+        // {
+        //     vertices.Add( (vertices[0] + vertices[3]) * 0.5f );
+        //     vertices.Add( (vertices[1] + vertices[2]) * 0.5f );
+        // }
+        // else 
+        // {
+        //     vertices.Add( (vertices[0] + vertices[1]) * 0.5f );
+        //     vertices.Add( (vertices[3] + vertices[2]) * 0.5f );
+        // }
+
+       
 
 
     }
 
     
 
-    public void AddJointedVertices( Vector3 a_, Vector3 b_ ) 
+    public void AddJointedVertices( Vector3 a_, Vector3 b_, PartitionSide partitionSide_ ) 
     {
         vertices.Add( a_ );
         vertices.Add( b_ );
+        if(partitionSide_ == PartitionSide.LeftBottom)
+        {
+            isLeftBottomSideAddVertices = true;
+        }
+        else 
+        {
+            isRightTopSideAddVertices = true;
+        }
     }
 
 
@@ -94,12 +108,12 @@ public class Partition
         float lowT  = ProjectAndCalcT( from, to, lowPos_ );
         float highT = ProjectAndCalcT( from, to, highPos_ );
         Debug.Assert( lowT < highT );
-        infiltrating_Ts.Add( new SegmentMerge.Segment(lowT, highT) );
+        infiltrating_Ts.Add( new Segment1DMerge.Segment1D(lowT, highT) );
     }
 
     public void SetAllInfiltrating() 
     {
-        infiltrating_Ts.Add( new SegmentMerge.Segment(0f, 1f) );
+        infiltrating_Ts.Add( new Segment1DMerge.Segment1D(0f, 1f) );
     }
 
 
@@ -143,7 +157,7 @@ public class Partition
         Vector3 from2to = to_ - from_;
         float dotVal = Vector3.Dot( (tgt_ - from_), from2to.normalized );
         float ret = dotVal / from2to.magnitude;
-        Debug.Log( "计算 t = " + ret );
+        //Debug.Log( "计算 t = " + ret );
         return Mathf.Clamp01(ret);
     }
 
@@ -172,34 +186,165 @@ public class Partition
     }
 
 
+
+    public class PPos 
+    {
+        public Vector3 pos;
+        public float angle;
+
+        public PPos( Vector3 pos_, float angle_ )
+        {
+            pos = pos_;
+            angle = angle_;
+        }
+    }
+
     public void BuildMesh() 
     {
-        SortVerties();
 
-        Vector2[] vectors2D = new Vector2[vertices.Count];
-        for( int i=0; i<vertices.Count; i++ )
+        Vector3 centerPos = rectInfo.GetCenterPos();
+        Vector3 checkDir;
+        if( partitionDirection == PartitionDirection.Vertical )
         {
-            vectors2D[i] = vertices[i];
+            checkDir = Vector3.up;
+        }
+        else 
+        {
+            checkDir = Vector3.right;
         }
 
-        // construct Polygon2D 
-        Polygon2D polygon = Polygon2D.Contour(vectors2D);
-        // construct Triangulation2D with Polygon2D and threshold angle (18f ~ 27f recommended) 22.5f
-        float thresholdAngle = 0.1f; // 这个角度足够小后, 插件就不会自作主张添加新顶点了;
-        Triangulation2D triangulation = new Triangulation2D(polygon, thresholdAngle );
-        // build a mesh from triangles in a Triangulation2D instance -- 没设置 uv 值
-        Mesh mesh = triangulation.Build();
-
-        // 装配 vertices, triangles
-        for( int i=0; i<mesh.triangles.Length; i++ ) 
+        List<PPos> PPoses = new List<PPos>();
+        for( int k=0; k<vertices.Count; k++ ) 
         {
-            Vector3 pos = mesh.vertices[mesh.triangles[i]];
-            int vertexIdx = CupboardStates.GetVertexIdx(pos);
-            CupboardStates.triangles.Add( vertexIdx );
+            float v =  Vector3.SignedAngle( checkDir, vertices[k] - centerPos, Vector3.forward );
+            //Debug.Log( "v = " + v );
+            PPoses.Add( new PPos( vertices[k], v ) );
         }
 
+        List<PPos> pPoses_LB = new List<PPos>(); // 负值
+        List<PPos> pPoses_RT = new List<PPos>(); // 正值
 
+        foreach( PPos p in PPoses )
+        {
+            List<PPos> container = null;
+            if( p.angle < 0f )
+            {
+                container = ( partitionDirection == PartitionDirection.Vertical ) ? pPoses_RT : pPoses_LB;
+            }
+            else 
+            {
+                container = ( partitionDirection == PartitionDirection.Vertical ) ? pPoses_LB : pPoses_RT;
+            }
+            container.Add( p );
+        }
+
+        // 排序, 之后都会从 t0 -> t1
+        if(partitionDirection == PartitionDirection.Vertical)
+        {
+            pPoses_LB.Sort( (x,y)=>{ return (x.angle > y.angle) ? -1 : 1 ; } );
+            pPoses_RT.Sort( (x,y)=>{ return (x.angle < y.angle) ? -1 : 1 ; } );
+        }
+        else 
+        {
+            pPoses_LB.Sort( (x,y)=>{ return (x.angle < y.angle) ? -1 : 1 ; } );
+            pPoses_RT.Sort( (x,y)=>{ return (x.angle > y.angle) ? -1 : 1 ; } );
+        }
+
+        // //-- 排序结果 debug:
+        // Debug.Log( "=== pPoses_LB ===" );
+        // foreach( PPos p in pPoses_LB )
+        // {
+        //     Debug.Log( "pos:" + p.pos.ToString() + ", angle = " + p.angle );
+        // }
+
+        // Debug.Log( "=== pPoses_RT ===" );
+        // foreach( PPos p in pPoses_RT )
+        // {
+        //     Debug.Log( "pos:" + p.pos.ToString() + ", angle = " + p.angle );
+        // }
+
+        bool is_LB_sml = pPoses_LB.Count <= pPoses_RT.Count; // 会影响 三角形生成时的面朝向
+
+        int lenSml = is_LB_sml ? pPoses_LB.Count : pPoses_RT.Count;
+        int lenBig = is_LB_sml ? pPoses_RT.Count : pPoses_LB.Count;
+
+        List<PPos> smlPPos = is_LB_sml ? pPoses_LB : pPoses_RT;     // 短列
+        List<PPos> bigPPos  = is_LB_sml ? pPoses_RT : pPoses_LB;    // 长列
+
+        // 拼出所有 四边形:
+        int i = 1;
+        for( ; i < lenSml; i++ )
+        {
+            if(partitionDirection == PartitionDirection.Vertical)
+            {
+                var noUse = is_LB_sml ?
+                    FourVertices( smlPPos[i-1], bigPPos[i-1], bigPPos[i], smlPPos[i] ) :
+                    FourVertices( bigPPos[i-1], smlPPos[i-1], smlPPos[i], bigPPos[i] );
+            }
+            else 
+            {
+                var noUse = is_LB_sml ?
+                    FourVertices( smlPPos[i-1], smlPPos[i], bigPPos[i], bigPPos[i-1] ) :
+                    FourVertices( smlPPos[i-1], bigPPos[i-1], bigPPos[i], smlPPos[i] );
+            }
+        }
+
+        // 拼出所有 三角形:
+        for( ; i < lenBig; i++ )
+        {
+            if(partitionDirection == PartitionDirection.Vertical)
+            {
+                var noUse = is_LB_sml ? 
+                    ThreeVertices( smlPPos[lenSml-1], bigPPos[i], bigPPos[i-1] ) :
+                    ThreeVertices( smlPPos[lenSml-1], bigPPos[i-1], bigPPos[i] );
+            }
+            else 
+            {
+                var noUse = is_LB_sml ? 
+                        ThreeVertices( smlPPos[lenSml-1], bigPPos[i-1], bigPPos[i] ) :
+                        ThreeVertices(  bigPPos[i-1], smlPPos[lenSml-1], bigPPos[i] );
+            }
+        }
     }
+
+
+    // 拿着 4个顶点,拼出两个三角形
+    public int FourVertices( PPos lb_, PPos rb_, PPos rt_, PPos lt_ ) 
+    {
+
+        int idx_0 = CupboardStates.GetVertexIdx(lb_.pos);
+        int idx_1 = CupboardStates.GetVertexIdx(rb_.pos);
+        int idx_2 = CupboardStates.GetVertexIdx(rt_.pos);
+        int idx_3 = CupboardStates.GetVertexIdx(lt_.pos);
+
+        CupboardStates.triangles.Add( idx_3 );
+        CupboardStates.triangles.Add( idx_2 );
+        CupboardStates.triangles.Add( idx_1 );
+        // 
+        CupboardStates.triangles.Add( idx_3 );
+        CupboardStates.triangles.Add( idx_1 );
+        CupboardStates.triangles.Add( idx_0 );
+        return 0;
+    }
+
+    // 顺时针 3 个点:
+    public int ThreeVertices( PPos ppos_0, PPos ppos_1, PPos ppos_2 ) 
+    {
+        int idx_0 = CupboardStates.GetVertexIdx(ppos_0.pos);
+        int idx_1 = CupboardStates.GetVertexIdx(ppos_1.pos);
+        int idx_2 = CupboardStates.GetVertexIdx(ppos_2.pos);
+        CupboardStates.triangles.Add( idx_0 );
+        CupboardStates.triangles.Add( idx_1 );
+        CupboardStates.triangles.Add( idx_2 );
+        return 0;
+    }
+
+
+
+
+
+
+
     
 
 }

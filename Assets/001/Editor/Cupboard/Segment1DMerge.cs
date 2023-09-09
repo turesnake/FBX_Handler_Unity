@@ -12,17 +12,17 @@ namespace Cupboard{
 
 
 
-public class SegmentMerge
+public class Segment1DMerge
 {
     
-    //List<>
 
-    public class Segment
+
+    public class Segment1D
     {
         public float head;
         public float end;
         public bool isActive; // false 表示此 segment 已经被合并了, 变成了无用的
-        public Segment( float head_, float end_ ) 
+        public Segment1D( float head_, float end_ ) 
         {
             Debug.Assert( head_ < end_ );
             head = head_;
@@ -36,16 +36,16 @@ public class SegmentMerge
     }
 
 
-    public List<Segment> segments = new List<Segment>();
+    public List<Segment1D> segments = new List<Segment1D>();
 
 
-    public SegmentMerge() 
+    public Segment1DMerge() 
     {
     }
 
 
     // 不关心性能版:
-    public void Add(Segment newSegment_)
+    public void Add(Segment1D newSegment_)
     {
         if( segments.Count == 0 )
         {

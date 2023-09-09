@@ -298,24 +298,7 @@ public static class CupboardUtils
 
         Mesh mesh = new Mesh();
 		mesh.name = "partition_Grid";
-
-		//Vector3[] vertices = rectInfo_.GetCornerVertices();
-
-		// Vector2[] uv = new Vector2[4]{ 
-		// 	new Vector2( 0f, 0f),
-		// 	new Vector2( 1f, 0f),
-		// 	new Vector2( 1f, 1f),
-		// 	new Vector2( 0f, 1f)
-		// };
-
-		// Vector4 tangent = new Vector4(1f, 0f, 0f, -1f);
-		// Vector4[] tangents = new Vector4[4]{ tangent, tangent, tangent, tangent };
-		
-		mesh.vertices = CupboardStates.vertices.ToArray();
-		//mesh.uv = uv;
-		//mesh.tangents = tangents;
-
-		
+		mesh.vertices = CupboardStates.GetVertices().ToArray();
 		mesh.triangles = CupboardStates.triangles.ToArray();
 		mesh.RecalculateNormals();
 		//---
@@ -325,8 +308,6 @@ public static class CupboardUtils
         string filePath = System.IO.Path.Combine(Application.dataPath, name + ".fbx");
         //ModelExporter.ExportObject(filePath, Selection.objects[0]);
         ModelExporter.ExportObject(filePath, newgo );
-
-
     }
 
 }

@@ -36,6 +36,15 @@ public enum VerticalType
 }
 
 
+// Partition 的哪一侧:
+public enum PartitionSide
+{
+    LeftBottom = 1,
+    RightTop = 2,
+}
+
+
+
 
 
 
@@ -44,7 +53,7 @@ public static class CupboardStates
     public static float cupboardWidth  = 20f;
     public static float cupboardHeight = 20f;
 
-    public static float partitionRadius  = 0.25f; // 隔板厚度半径 0.25f
+    public static float partitionRadius  = 0.15f; // 隔板厚度半径 0.25f
 
     public static float partitionFullInfiltratingPercent  = 1f; // 有些隔板整个都会被保留, 不会被删减, 选择保留的随机百分比; 推荐: 0.5ff
 
@@ -83,12 +92,18 @@ public static class CupboardStates
     // ========================================= 全局 顶点pos 管理 ================================================
     // -2-: 全局维护, 以便直接写入一个 mesh 中;
     // -2-: 目的是让一些靠的非常近的顶点, 直接算作一个 顶点;
-    // k: (Vector3)vertex.GetHashCode()
+    // k: vertex hash value
     // v: vertexIdx
-    static Dictionary<int,int> vertexHash_2_idxs = new Dictionary<int,int>();
-    public static List<Vector3> vertices =  new List<Vector3>(); // 用 vertexIdx 来获得具体 pos, 对应: Meh.vertices
+    static Dictionary<string,int> vertexHash_2_idxs = new Dictionary<string,int>();
+    static List<Vector3> vertices =  new List<Vector3>(); // 用 vertexIdx 来获得具体 pos, 对应: Meh.vertices
+
+    public static List<Vector3> GetVertices() 
+    {
+        return vertices;
+    }
 
 
+    // Vector3.GetHashCode() 重合率很高, 改用本函数, 一定不重合
     public static string GetVertexHash( Vector3 pos_ ) 
     {
         string hash =   string.Format("{0:f4}", pos_.x) + "-" +
@@ -101,7 +116,7 @@ public static class CupboardStates
     public static int GetVertexIdx( Vector3 pos_ ) 
     {
         pos_ = LimitVector3Precision(pos_); // 限制精度
-        int posHash = pos_.GetHashCode();
+        string posHash = GetVertexHash(pos_); 
         if( vertexHash_2_idxs.ContainsKey(posHash) ) 
         {
             // 存在此 Vertex 了:
@@ -129,10 +144,42 @@ public static class CupboardStates
     // ========================================= 全局 三角形 管理 ================================================
     public static List<int> triangles =  new List<int>(); // 对应 Meh.triangles
 
+    // 存储一条边 被几个三角形用过了:
+    static Dictionary<ulong,int> edgeHash_2_usedTimes = new Dictionary<ulong, int>();
 
 
+    public static ulong GetEdgeHash( int vertexIdx_a_, int vertexIdx_b_ ) 
+    {
+        ulong sml = (ulong)Mathf.Min( vertexIdx_a_, vertexIdx_b_);
+        ulong big = (ulong)Mathf.Max( vertexIdx_a_, vertexIdx_b_);
+        return (sml << 32) + big;
+    }
 
+    public static void RecordEdge( int vertexIdx_a_, int vertexIdx_b_ ) 
+    {
+        ulong edgeHash = GetEdgeHash( vertexIdx_a_, vertexIdx_b_ );
+        if( edgeHash_2_usedTimes.ContainsKey( edgeHash ) )
+        {
+            edgeHash_2_usedTimes[edgeHash] ++;
+            // 不准被 2个以上三角形公用
+            Debug.Assert( edgeHash_2_usedTimes[edgeHash] <= 2,     "a:" + vertexIdx_a_ + ": " + vertices[vertexIdx_a_].ToString() + 
+                                                                "\n b:" + vertexIdx_b_ + ": " + vertices[vertexIdx_b_].ToString() ); 
+        }
+        else 
+        {
+            edgeHash_2_usedTimes[edgeHash] = 0;
+        }
+    }
 
+    // 在边界上的 edge, 可以向后延展出一个面;
+    public static bool IsEdgeOnTheBorder( Vector3 a_, Vector3 b_ ) 
+    {
+        ulong edgeHash = GetEdgeHash( GetVertexIdx(a_), GetVertexIdx(b_) );
+        Debug.Assert(edgeHash_2_usedTimes.ContainsKey(edgeHash));
+        int usedTimes = edgeHash_2_usedTimes[edgeHash];
+        Debug.Assert( usedTimes == 1 || usedTimes == 2 );
+        return usedTimes == 1;
+    }
 
 }
 
