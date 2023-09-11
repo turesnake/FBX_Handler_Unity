@@ -19,14 +19,16 @@ public class MyMesh
 
     public List<Vertex> vertices = new List<Vertex>(); // mesh.vertices, mesh.normals
 
+    public List<Vector2> uv =  new List<Vector2>(); // 对应 mesh.uv
+
+
     // ----------------------------------------
     public List<int> triangles =  new List<int>(); // 对应 Meh.triangles
 
+     
+
 
     // ----------------------------------------
-
-    
-
     public MyMesh() {}
 
 
@@ -43,6 +45,7 @@ public class MyMesh
         {
             // 不存在此 Vertex:
             vertices.Add(v_);
+            uv.Add(Vector2.zero); // just init
             int retIdx = vertices.Count-1;
             vertexHash_2_idxs.Add(v_.hash, retIdx);
             return retIdx;
@@ -55,96 +58,25 @@ public class MyMesh
         return vertices[vertexIdx_];
     }
 
-    // ====================================
-
-    public List<Vector3> verticePoses = new List<Vector3>();
-    // 不关心 normal
-    Dictionary<string,int> vertexPosHash_2_idxs = new Dictionary<string,int>();
-    // 存储一条边 被几个三角形用过了:
-    Dictionary<ulong,int> edgeHash_2_usedTimes = new Dictionary<ulong, int>();
-
-
-    public void Debug_edgeHash_2_usedTimes() 
-    {
-        Debug.Log( "debug -- edgeHash_2_usedTimes ====" );
-        foreach( var p in edgeHash_2_usedTimes )
-        {
-            Debug.Log( "k:" + p.Key + "; v:" + p.Value );
-        }
-    }
-
-    public int GetVertexPosIdx( Vector3 pos_ ) 
-    {
-        string posHash = Vertex.GetPosHash(pos_);
-        if( vertexPosHash_2_idxs.ContainsKey(posHash) ) 
-        {
-            // 存在此 Vertex 了:
-            int retIdx = vertexPosHash_2_idxs[posHash];
-            Debug.Assert( retIdx >= 0 && retIdx < verticePoses.Count );
-            return retIdx;
-        }
-        else 
-        {
-            // 不存在此 Vertex:
-            verticePoses.Add(pos_);
-            int retIdx = verticePoses.Count-1;
-            vertexPosHash_2_idxs.Add(posHash, retIdx);
-            return retIdx;
-        }
-    }
-
-
-    public void RecordEdge( int vertexIdx_a_, int vertexIdx_b_ ) 
-    {
-        Vector3 pos_a = GetVertex(vertexIdx_a_).pos;
-        Vector3 pos_b = GetVertex(vertexIdx_b_).pos;
-        int posIdx_a = GetVertexPosIdx(pos_a);
-        int posIdx_b = GetVertexPosIdx(pos_b);
-        //---
-        ulong edgeHash = GetEdgeHash( posIdx_a, posIdx_b );
-        if( edgeHash_2_usedTimes.ContainsKey( edgeHash ) )
-        {
-            edgeHash_2_usedTimes[edgeHash] ++;
-            // 不准被 2个以上三角形公用
-            Debug.Assert( edgeHash_2_usedTimes[edgeHash] <= 2,     "a:" + vertexIdx_a_ + ": " + vertices[vertexIdx_a_].ToString() + 
-                                                                "\n b:" + vertexIdx_b_ + ": " + vertices[vertexIdx_b_].ToString() ); 
-        }
-        else 
-        {
-            edgeHash_2_usedTimes[edgeHash] = 1;
-        }
-    }
-
-
-    // 在边界上的 edge, 可以向后延展出一个面;
-    public bool IsEdgeOnTheBorder( Vector3 pos_a_, Vector3 pos_b_ ) 
-    {
-        return IsEdgeOnTheBorder( GetVertexPosIdx(pos_a_), GetVertexPosIdx(pos_b_) );
-    }
-
-
-    public bool IsEdgeOnTheBorder( int posIdx_a_, int posIdx_b_ ) 
-    {
-        ulong edgeHash = GetEdgeHash( posIdx_a_, posIdx_b_ );
-        Debug.Assert(edgeHash_2_usedTimes.ContainsKey(edgeHash));
-        int usedTimes = edgeHash_2_usedTimes[edgeHash];
-        Debug.Assert( usedTimes == 1 || usedTimes == 2, "usedTimes = " + usedTimes );
-        return usedTimes == 1;
-    }
-
-
-    static ulong GetEdgeHash( int posIdx_a_, int posIdx_b_ ) 
-    {
-        ulong sml = (ulong)Mathf.Min( posIdx_a_, posIdx_b_);
-        ulong big = (ulong)Mathf.Max( posIdx_a_, posIdx_b_);
-        return (sml << 32) + big;
-    }
-
 
     // ====================================
-
     // 拿着 4个顶点,拼出两个三角形
-    public int FourVertices( Vector3 pos_lb_, Vector3 pos_rb_, Vector3 pos_rt_, Vector3 pos_lt_, Vector3 normal_ ) 
+    // 参数传入者需保证, 矩形 一定是个 高>宽 的 纵向矩形;  (这将影响 uv 值)
+    public int FourVertices( Vector3 pos_lb_, Vector3 pos_rb_, Vector3 pos_rt_, Vector3 pos_lt_, Vector3 normal_, PartitionDirection partitionDirection_ ) 
+    {
+        if( partitionDirection_ == PartitionDirection.Vertical  )
+        {
+            return _FourVertices( pos_lb_, pos_rb_, pos_rt_, pos_lt_, normal_ );
+        }
+        else 
+        {
+            //return _FourVertices( pos_lt_, pos_lb_, pos_rb_, pos_rt_, normal_ ); // 将 横着的矩形 旋转为 竖着的
+            return _FourVertices( pos_lb_, pos_rb_, pos_rt_, pos_lt_, normal_ );
+        }
+    }
+
+
+    public int _FourVertices( Vector3 pos_lb_, Vector3 pos_rb_, Vector3 pos_rt_, Vector3 pos_lt_, Vector3 normal_ ) 
     {
         Vertex lb = new Vertex( pos_lb_, normal_ );
         Vertex rb = new Vertex( pos_rb_, normal_ );
@@ -156,6 +88,14 @@ public class MyMesh
         int idx_3 = GetVertexIdx(lt);
         ConnectVerticesToTriangle( idx_3, idx_2, idx_1 );
         ConnectVerticesToTriangle( idx_3, idx_1, idx_0 );
+
+        // todo: 简单版:
+        uv[idx_0] = new Vector2( 0f, 0f );
+        uv[idx_1] = new Vector2( 1f, 0f );
+        uv[idx_2] = new Vector2( 1f, 1f );
+        uv[idx_3] = new Vector2( 0f, 1f );
+
+
         return 0;
     }
 
@@ -178,9 +118,6 @@ public class MyMesh
         triangles.Add( idx_0 );
         triangles.Add( idx_1 );
         triangles.Add( idx_2 );
-        RecordEdge( idx_0, idx_1 );
-        RecordEdge( idx_0, idx_2 );
-        RecordEdge( idx_1, idx_2 );
     }
 
 
@@ -206,6 +143,7 @@ public class MyMesh
             Debug.Log( vertices[i].ToString() );
         }
         mesh.vertices = vs;
+        mesh.uv = uv.ToArray();
         mesh.normals = ns;
         //---
         mesh.triangles = triangles.ToArray();

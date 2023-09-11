@@ -17,7 +17,6 @@ public class Cell
 
 
     public Partition[] neighborPartitions = new Partition[4]{null,null,null,null}; // leftBottom, rightBottom, rightTop, leftTop
-
     
     public Vector3 BasePos => rectInfo.basePos;
     public float W => rectInfo.w;
@@ -46,8 +45,6 @@ public class Cell
     public void Split( PartitionDirection partitionDirection_, float t_ )
     {
         partition = new Partition( this, partitionDirection_, t_ );
-
-        Vector3[] partitionCornerVertices = partition.rectInfo.GetCornerVertices();
 
         if(partitionDirection_ == PartitionDirection.Vertical) 
         {
@@ -80,17 +77,6 @@ public class Cell
                 },
                 myMesh
             );
-
-            // 连接 下边 partition:
-            if( neighborPartitions[0] != null ) 
-            {
-                neighborPartitions[0].AddJointedVertices(partitionCornerVertices[0], partitionCornerVertices[1], PartitionSide.LeftBottom );
-            }
-            // 连接 上边 partition:
-            if( neighborPartitions[2] != null ) 
-            {
-                neighborPartitions[2].AddJointedVertices(partitionCornerVertices[3], partitionCornerVertices[2], PartitionSide.RightTop);
-            }
         }
         else 
         {
@@ -123,17 +109,6 @@ public class Cell
                 },
                 myMesh
             );
-
-            // 连接 左边 partition:
-            if( neighborPartitions[3] != null ) 
-            {
-                neighborPartitions[3].AddJointedVertices(partitionCornerVertices[0], partitionCornerVertices[3], PartitionSide.LeftBottom);
-            }
-            // 连接 右边 partition:
-            if( neighborPartitions[1] != null ) 
-            {
-                neighborPartitions[1].AddJointedVertices(partitionCornerVertices[1], partitionCornerVertices[2], PartitionSide.RightTop);
-            }
         }
     }
 
@@ -191,9 +166,6 @@ public class Cell
     {
         return IsLeaf() && IsEmpty();
     }
-
-
-
 
 }
 

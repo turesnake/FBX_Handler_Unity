@@ -28,21 +28,21 @@ public static class CupboardUtils
         new Candidate( new Vector3(2.55f, 4.77f, 1f), null ),
         new Candidate( new Vector3(3.11f, 1.31f, 1f), null ),
         new Candidate( new Vector3(3.05f, 3.66f, 1f), null ),
-        new Candidate( new Vector3(2.31f, 2.5f, 1f), null ),
-        new Candidate( new Vector3(4.05f, 2.89f, 1f), null ),
-        new Candidate( new Vector3(3.41f, 2.65f, 1f), null ),
-        new Candidate( new Vector3(1.24f, 1.76f, 1f), null ),
-        new Candidate( new Vector3(5.41f, 2.7f, 1f), null ),
-        new Candidate( new Vector3(1.31f, 1.23f, 1f), null ),
-        new Candidate( new Vector3(1.95f, 3.88f, 1f), null ),
-        new Candidate( new Vector3(2.3f, 1.3f, 1f), null ),
-        new Candidate( new Vector3(1.22f, 5.33f, 1f), null ),
-        new Candidate( new Vector3(2.31f, 2.5f, 1f), null ),
-        new Candidate( new Vector3(2.2f, 1.1f, 1f), null ),
-        new Candidate( new Vector3(2.2f, 1.5f, 1f), null ),
-        new Candidate( new Vector3(1.2f, 2.1f, 1f), null ),
-        new Candidate( new Vector3(1.4f, 1.3f, 1f), null ),
-        new Candidate( new Vector3(1.05f, 1.5f, 1f), null ),
+        // new Candidate( new Vector3(2.31f, 2.5f, 1f), null ),
+        // new Candidate( new Vector3(4.05f, 2.89f, 1f), null ),
+        // new Candidate( new Vector3(3.41f, 2.65f, 1f), null ),
+        // new Candidate( new Vector3(1.24f, 1.76f, 1f), null ),
+        // new Candidate( new Vector3(5.41f, 2.7f, 1f), null ),
+        // new Candidate( new Vector3(1.31f, 1.23f, 1f), null ),
+        // new Candidate( new Vector3(1.95f, 3.88f, 1f), null ),
+        // new Candidate( new Vector3(2.3f, 1.3f, 1f), null ),
+        // new Candidate( new Vector3(1.22f, 5.33f, 1f), null ),
+        // new Candidate( new Vector3(2.31f, 2.5f, 1f), null ),
+        // new Candidate( new Vector3(2.2f, 1.1f, 1f), null ),
+        // new Candidate( new Vector3(2.2f, 1.5f, 1f), null ),
+        // new Candidate( new Vector3(1.2f, 2.1f, 1f), null ),
+        // new Candidate( new Vector3(1.4f, 1.3f, 1f), null ),
+        // new Candidate( new Vector3(1.05f, 1.5f, 1f), null ),
     };
 
 
@@ -52,15 +52,13 @@ public static class CupboardUtils
 
 
 
-    public static void Do() 
+    public static void Do( WindowParams windowParams_ ) 
     {
         CupboardStates.Clear();
 
         SetMinGap( ref fadeCandidates);
 
         MyMesh innPartitionsMesh = new MyMesh();
-
-        List<Partition> partitions = new List<Partition>();
 
 
         // -- 生成 内隔板:
@@ -83,25 +81,19 @@ public static class CupboardUtils
         }
 
         // --- debug:
-        //DebugCell( rootCell, "Root" );
         var rootGO = new GameObject("root_Cupboard");
-        DebugCell2( rootCell, rootGO, partitions );
+        DebugCell2( rootCell, rootGO );
 
-        foreach( var partition in partitions )
-        {
-            partition.SearchOutEdgeAndBuildInnFace();
-        }
 
-        GameObject innGO = BuildInnPartitionGameObj(innPartitionsMesh);
+        List<GameObject> meshGameObjs = new List<GameObject>();
+        GameObject outFrameGO      = BuildOutFrameGameObj( new Vector3( 0f,0f,0f ), windowParams_.outFrameColor );
+        GameObject innPartitionsGO = BuildInnPartitionGameObj( outFrameGO, innPartitionsMesh, windowParams_.partitionColor);
+        meshGameObjs.Add( outFrameGO );
+        meshGameObjs.Add( innPartitionsGO );
 
-        // -- 生成 外框:
-        GameObject outGO = BuildOutFrameGameObj( new Vector3( 0f,0f,0f ) );
-
-        
         // --- save to fbx:
         string filePath = System.IO.Path.Combine(Application.dataPath, "Capboard_tpr.fbx");
-        GameObject[] fbxGOs = new GameObject[]{ innGO, outGO };
-        ModelExporter.ExportObjects(filePath, fbxGOs );
+        ModelExporter.ExportObjects(filePath, meshGameObjs.ToArray() );
     }
 
 
@@ -233,14 +225,12 @@ public static class CupboardUtils
     }
 
 
-    static void DebugCell2( Cell cell_, GameObject parent_, List<Partition> partitions_ ) 
+    static void DebugCell2( Cell cell_, GameObject parent_ ) 
     {
         if( cell_ == null ) 
         {
             return;
         }
-
-        
 
         GameObject selfGO = null;
         if( cell_.IsLeaf() ) 
@@ -268,13 +258,11 @@ public static class CupboardUtils
             partition.DrawAllVertices(selfGO.transform);
 
             // ---
-            partition.BuildMesh();
-            partitions_.Add(partition);
+            partition.BuildMeshSimple();
         }
 
-    
-        DebugCell2( cell_.cell_LB, selfGO, partitions_ );
-        DebugCell2( cell_.cell_RT, selfGO, partitions_ );
+        DebugCell2( cell_.cell_LB, selfGO );
+        DebugCell2( cell_.cell_RT, selfGO );
     }
 
 
@@ -304,45 +292,30 @@ public static class CupboardUtils
 
 
     // 全局唯一的 partition mesh go
-    static GameObject BuildInnPartitionGameObj( MyMesh myMesh_ )
+    static GameObject BuildInnPartitionGameObj( GameObject parentGO_, MyMesh myMesh_, Color color_ )
     {
 
 		string name = "Partition_000";
         var newgo = new GameObject(name);
-		//newgo.transform.SetParent( parent_.transform );
+		newgo.transform.SetParent( parentGO_.transform );
 
         // --- 随机颜色 --
         MeshRenderer meshRenderer = newgo.AddComponent<MeshRenderer>();
         meshRenderer.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color color = Random.ColorHSV(0.3f, 0.4f, 0.05f,0.1f, 0.1f, 0.2f); // 隔板颜色
-        meshRenderer.sharedMaterial.SetColor("_BaseColor", color );
+        meshRenderer.sharedMaterial.SetColor("_BaseColor", color_ );
 
         // --- mesh:
         MeshFilter meshFilter = newgo.AddComponent<MeshFilter>();
-
-        // Mesh mesh = new Mesh();
-		// mesh.name = "partition_Grid";
-		// mesh.vertices = CupboardStates.GetVertices().ToArray();
-		// mesh.triangles = CupboardStates.triangles.ToArray();
-		// mesh.RecalculateNormals();
-		//---
 		meshFilter.mesh = myMesh_.GetMesh("partition_Grid");
-
         return newgo;
-
-        // --- save to fbx:
-        // string filePath = System.IO.Path.Combine(Application.dataPath, name + ".fbx");
-        // //ModelExporter.ExportObject(filePath, Selection.objects[0]);
-        // ModelExporter.ExportObject(filePath, newgo );
     }
 
 
 
     // ========================================== 柜子外壳 ===============================================
 
-    static GameObject BuildOutFrameGameObj( Vector3 outPosLB_ )
+    static GameObject BuildOutFrameGameObj( Vector3 outPosLB_, Color color_ )
     {
-
         OutFrame outFrame = new OutFrame( outPosLB_, CupboardStates.cupboardWidth, CupboardStates.cupboardHeight, CupboardStates.outFrameWidth );
 
         string name = "OutFrame";
@@ -351,20 +324,11 @@ public static class CupboardUtils
         // --- 随机颜色 --
         MeshRenderer meshRenderer = newgo.AddComponent<MeshRenderer>();
         meshRenderer.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        Color color = Random.ColorHSV(0.8f, 0.9f, 0.05f,0.1f, 0.1f, 0.2f); // 隔板颜色
-        meshRenderer.sharedMaterial.SetColor("_BaseColor", color );
-
+        meshRenderer.sharedMaterial.SetColor("_BaseColor", color_ );
         // --- mesh:
         MeshFilter meshFilter = newgo.AddComponent<MeshFilter>();
-
         meshFilter.mesh = outFrame.myMesh.GetMesh("out_frame");
-
         return newgo;
-
-        // --- save to fbx:
-        // string filePath = System.IO.Path.Combine(Application.dataPath, name + ".fbx");
-        // //ModelExporter.ExportObject(filePath, Selection.objects[0]);
-        // ModelExporter.ExportObject(filePath, newgo );
     }
 
 
