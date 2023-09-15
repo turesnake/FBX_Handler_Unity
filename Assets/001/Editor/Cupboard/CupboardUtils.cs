@@ -28,21 +28,21 @@ public static class CupboardUtils
         new Candidate( new Vector3(2.55f, 4.77f, 1f), null ),
         new Candidate( new Vector3(3.11f, 1.31f, 1f), null ),
         new Candidate( new Vector3(3.05f, 3.66f, 1f), null ),
-        // new Candidate( new Vector3(2.31f, 2.5f, 1f), null ),
-        // new Candidate( new Vector3(4.05f, 2.89f, 1f), null ),
-        // new Candidate( new Vector3(3.41f, 2.65f, 1f), null ),
-        // new Candidate( new Vector3(1.24f, 1.76f, 1f), null ),
-        // new Candidate( new Vector3(5.41f, 2.7f, 1f), null ),
-        // new Candidate( new Vector3(1.31f, 1.23f, 1f), null ),
-        // new Candidate( new Vector3(1.95f, 3.88f, 1f), null ),
-        // new Candidate( new Vector3(2.3f, 1.3f, 1f), null ),
-        // new Candidate( new Vector3(1.22f, 5.33f, 1f), null ),
-        // new Candidate( new Vector3(2.31f, 2.5f, 1f), null ),
-        // new Candidate( new Vector3(2.2f, 1.1f, 1f), null ),
-        // new Candidate( new Vector3(2.2f, 1.5f, 1f), null ),
-        // new Candidate( new Vector3(1.2f, 2.1f, 1f), null ),
-        // new Candidate( new Vector3(1.4f, 1.3f, 1f), null ),
-        // new Candidate( new Vector3(1.05f, 1.5f, 1f), null ),
+        new Candidate( new Vector3(2.31f, 2.5f, 1f), null ),
+        new Candidate( new Vector3(4.05f, 2.89f, 1f), null ),
+        new Candidate( new Vector3(3.41f, 2.65f, 1f), null ),
+        new Candidate( new Vector3(1.24f, 1.76f, 1f), null ),
+        new Candidate( new Vector3(5.41f, 2.7f, 1f), null ),
+        new Candidate( new Vector3(1.31f, 1.23f, 1f), null ),
+        new Candidate( new Vector3(1.95f, 3.88f, 1f), null ),
+        new Candidate( new Vector3(2.3f, 1.3f, 1f), null ),
+        new Candidate( new Vector3(1.22f, 5.33f, 1f), null ),
+        new Candidate( new Vector3(2.31f, 2.5f, 1f), null ),
+        new Candidate( new Vector3(2.2f, 1.1f, 1f), null ),
+        new Candidate( new Vector3(2.2f, 1.5f, 1f), null ),
+        new Candidate( new Vector3(1.2f, 2.1f, 1f), null ),
+        new Candidate( new Vector3(1.4f, 1.3f, 1f), null ),
+        new Candidate( new Vector3(1.05f, 1.5f, 1f), null ),
     };
 
 
@@ -255,7 +255,7 @@ public static class CupboardUtils
                 FBXCreator_2.CreateQuadGameObj( selfGO, rInfo, color, "partition_segment" );
             }
 
-            partition.DrawAllVertices(selfGO.transform);
+            //partition.DrawAllVertices(selfGO.transform);
 
             // ---
             partition.BuildMeshSimple();

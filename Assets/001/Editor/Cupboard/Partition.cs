@@ -155,28 +155,28 @@ public class Partition
     {
         // 紧贴着其它 partitionBox 的面, 可以被省略
         bool[] fourSide = new bool[4]{ true, true, true, true };// lb,rb, rt, lt
-        // if( partitionDirection == PartitionDirection.Vertical )
-        // {
-        //     if( segment_.head < 0.001f )
-        //     {
-        //         fourSide[0] = false;
-        //     }
-        //     if( segment_.end > 0.999f )
-        //     {
-        //         fourSide[2] = false;
-        //     }
-        // }
-        // else
-        // {
-        //     if( segment_.head < 0.001f )
-        //     {
-        //         fourSide[3] = false;
-        //     }
-        //     if( segment_.end > 0.999f )
-        //     {
-        //         fourSide[1] = false;
-        //     }
-        // }
+        if( partitionDirection == PartitionDirection.Vertical )
+        {
+            if( segment_.head < 0.001f )
+            {
+                fourSide[0] = false;
+            }
+            if( segment_.end > 0.999f )
+            {
+                fourSide[2] = false;
+            }
+        }
+        else
+        {
+            if( segment_.head < 0.001f )
+            {
+                fourSide[3] = false;
+            }
+            if( segment_.end > 0.999f )
+            {
+                fourSide[1] = false;
+            }
+        }
 
         // 建模需要用到的 8 个顶点:
         Vector3 toFar = Vector3.forward * CupboardStates.partitionInnDepth;
@@ -194,22 +194,22 @@ public class Partition
         // 建模 正面:
         myMesh.FourVertices( front_LB, front_RB, front_RT, front_LT,  Vector3.back,  partitionDirection );
         // 建模 4 个边面:
-        // if( fourSide[0] == true ) 
-        // {
-        //     myMesh.FourVertices( back_LB, back_RB, front_RB, front_LB,     Vector3.down,  partitionDirection );
-        // }
-        // if( fourSide[1] == true ) 
-        // {
-        //     myMesh.FourVertices( front_RB, back_RB, back_RT, front_RT,     Vector3.right,  partitionDirection );
-        // }
-        // if( fourSide[2] == true ) 
-        // {
-        //     myMesh.FourVertices( front_LT, front_RT, back_RT, back_LT,     Vector3.up,  partitionDirection );
-        // }
-        // if( fourSide[3] == true ) 
-        // {
-        //     myMesh.FourVertices( back_LB, front_LB, front_LT, back_LT,     Vector3.left,  partitionDirection );
-        // }
+        if( fourSide[0] == true ) 
+        {
+            myMesh.FourVertices( back_LB, back_RB, front_RB, front_LB,     Vector3.down,  partitionDirection );
+        }
+        if( fourSide[1] == true ) 
+        {
+            myMesh.FourVertices( front_RB, back_RB, back_RT, front_RT,     Vector3.right,  partitionDirection );
+        }
+        if( fourSide[2] == true ) 
+        {
+            myMesh.FourVertices( front_LT, front_RT, back_RT, back_LT,     Vector3.up,  partitionDirection );
+        }
+        if( fourSide[3] == true ) 
+        {
+            myMesh.FourVertices( back_LB, front_LB, front_LT, back_LT,     Vector3.left,  partitionDirection );
+        }
     }
 
 
